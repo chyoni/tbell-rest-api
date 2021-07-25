@@ -1,0 +1,31 @@
+
+###
+http://127.0.0.1:4000/tbell
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2MjcxOTM3ODQsInVzZXJfaWQiOjF9.jTL44ZXaeu3GcR_aO2IZ_KBTht4kcv6xgMMd372vfN0
+
+###
+http://127.0.0.1:4000/tbell/user/fefe
+
+### 
+POST http://127.0.0.1:4000/tbell/user 
+
+{
+    "Username": "gildong",
+    "Password": "1234",
+    "FirstName": "길동",
+    "LastName": "홍",
+    "Gender": "male",
+    "workExperience": "1 year 8 month"
+}
+
+###
+POST http://127.0.0.1:4000/tbell/login 
+
+{
+    "Username": "cwchoi",
+    "Password": "1234"
+}
+
+### 
+DELETE http://127.0.0.1:4000/tbell/user/3
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2MjcyMDE1NDMsInVzZXJfaWQiOjF9.wwHC6jkFJSzk3zPBbpHKT7aN_Jf3kw3DmZsw7VyKPKA
