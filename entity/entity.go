@@ -16,6 +16,7 @@ type User struct {
 	LastName       string
 	Gender         string `gorm:"not null"`
 	WorkExperience string
+	IsLogged       bool `gorm:"not null;default:false"`
 }
 
 // BeforeCreate is receiver function of hashed password.

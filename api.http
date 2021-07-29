@@ -1,31 +1,45 @@
 
 ###
 http://127.0.0.1:4000/tbell
-Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2MjcxOTM3ODQsInVzZXJfaWQiOjF9.jTL44ZXaeu3GcR_aO2IZ_KBTht4kcv6xgMMd372vfN0
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2Mjc1MzI5NDksInVzZXJfaWQiOjF9.ywQoIU5Bxxzgin-lF3WGEjsG71E87GnwL8kXM0zcemo
 
 ###
-http://127.0.0.1:4000/tbell/user/fefe
+http://127.0.0.1:4000/tbell/user/1
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2Mjc1MzI5NDksInVzZXJfaWQiOjF9.ywQoIU5Bxxzgin-lF3WGEjsG71E87GnwL8kXM0zcemo
 
 ### 
 POST http://127.0.0.1:4000/tbell/user 
 
 {
-    "Username": "gildong",
+    "Username": "cwchoi",
     "Password": "1234",
-    "FirstName": "길동",
-    "LastName": "홍",
+    "FirstName": "치원",
+    "LastName": "최",
     "Gender": "male",
     "workExperience": "1 year 8 month"
 }
 
 ###
-POST http://127.0.0.1:4000/tbell/login 
+POST http://127.0.0.1:4000/tbell/user/login 
 
 {
     "Username": "cwchoi",
-    "Password": "1234"
+    "Password": "2222"
 }
 
+###
+http://localhost:4000/tbell/user/logout
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2Mjc1MzY1NTEsInVzZXJfaWQiOjF9.UNWPRHwtpKxknGwO8CLby9y5RPfvjnVM2A3DuAm2fIk
+
 ### 
-DELETE http://127.0.0.1:4000/tbell/user/3
-Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2MjcyMDE1NDMsInVzZXJfaWQiOjF9.wwHC6jkFJSzk3zPBbpHKT7aN_Jf3kw3DmZsw7VyKPKA
+DELETE http://127.0.0.1:4000/tbell/user/1
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2Mjc1MzYwMzgsInVzZXJfaWQiOjF9.F1kwivZ3jXXFylwEWT1PI6VRcpbnrO4CampplOolq44
+
+###
+PUT http://localhost:4000/tbell/user/1/password
+Authorization: X-JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE2Mjc1Mzg3NzMsInVzZXJfaWQiOjF9.k_jeHytgG4OpAQpXDeJ1u_UXCQKtvo9JNUVaXMELb30
+
+{
+    "CurrentPassword": "1234",
+    "NewPassword": "2222"
+}

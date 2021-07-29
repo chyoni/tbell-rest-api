@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/chiwon99881/restapi/db"
 	"github.com/chiwon99881/restapi/entity"
@@ -45,8 +46,13 @@ type loginResponse struct {
 	Token    string `json:"token"`
 }
 
+type passwordUpdateData struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
 // GuardRequest is check authroized.
-func GuardRequest(rw http.ResponseWriter, r *http.Request) bool {
+func GuardRequest(rw http.ResponseWriter, r *http.Request) (bool, interface{}) {
 	userID, _, err := jwt.ExtractTokenMetaData(r)
 	exist := false
 
@@ -54,24 +60,51 @@ func GuardRequest(rw http.ResponseWriter, r *http.Request) bool {
 		rw.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(rw).Encode(errResponse{ErrMessage: "you are not authorized"})
 		exist = true
-		return exist
+		return exist, nil
 	}
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(rw).Encode(errResponse{ErrMessage: err.Error()})
 		exist = true
-		return exist
+		return exist, nil
 	}
-	return exist
+	return exist, userID
+}
+
+func isAuthenticated(rw http.ResponseWriter, r *http.Request, userID interface{}) bool {
+	isLogged := false
+
+	userIDAsString := fmt.Sprintf("%v", userID)
+	userIDAsInt, err := strconv.Atoi(userIDAsString)
+	if err != nil {
+		utility.ErrorHandler(err)
+		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: err.Error()})
+		return isLogged
+	}
+
+	isLoggedIn := db.IsLoggedIn(uint(userIDAsInt))
+	if !isLoggedIn {
+		rw.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: "you are not logged in"})
+		return isLogged
+	}
+	isLogged = true
+	return isLogged
 }
 
 func tbellHome(rw http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		isBreak := GuardRequest(rw, r)
+		isBreak, userID := GuardRequest(rw, r)
 		if isBreak {
 			return
 		}
+		isLogged := isAuthenticated(rw, r, userID)
+		if !isLogged {
+			return
+		}
+
 		responseAsBytes, err := json.Marshal(tbellHomeResponse{
 			CorporateName: "TBELL",
 			Business:      "Software Testing",
@@ -92,12 +125,16 @@ func tbellHome(rw http.ResponseWriter, r *http.Request) {
 }
 
 func tbellUser(rw http.ResponseWriter, r *http.Request) {
-	isBreak := GuardRequest(rw, r)
+	isBreak, userID := GuardRequest(rw, r)
 	if isBreak {
 		return
 	}
+	isLogged := isAuthenticated(rw, r, userID)
+	if !isLogged {
+		return
+	}
 	vars := mux.Vars(r)
-	userID := vars["user_id"]
+	userID = vars["user_id"]
 	var user = &entity.User{}
 	switch r.Method {
 	case "GET":
@@ -113,7 +150,13 @@ func tbellUser(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rw.WriteHeader(http.StatusOK)
-		json.NewEncoder(rw).Encode(user)
+		json.NewEncoder(rw).Encode(tbellUserResponse{
+			Username:       user.Username,
+			Gender:         user.Gender,
+			FirstName:      user.FirstName,
+			LastName:       user.LastName,
+			WorkExperience: user.WorkExperience,
+		})
 	case "DELETE":
 		result := db.DB().Find(user, userID)
 		if result.RowsAffected == 0 {
@@ -132,14 +175,9 @@ func tbellUser(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusOK)
 		return
 	}
-
 }
 
 func createUser(rw http.ResponseWriter, r *http.Request) {
-	isBreak := GuardRequest(rw, r)
-	if isBreak {
-		return
-	}
 	var user = &entity.User{}
 	err := json.NewDecoder(r.Body).Decode(user)
 	utility.ErrorHandler(err)
@@ -206,12 +244,93 @@ func loginUser(rw http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(rw).Encode(errResponse{ErrMessage: "somethings wrong with generate token"})
 	}
 
+	user.IsLogged = true
+	db.DB().Save(user)
+
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(loginResponse{
 		Username: user.Username,
 		Password: user.Password,
 		Token:    *token,
 	})
+}
+
+func logoutUser(rw http.ResponseWriter, r *http.Request) {
+	isBreak, userID := GuardRequest(rw, r)
+	if isBreak {
+		return
+	}
+	isLogged := isAuthenticated(rw, r, userID)
+	if !isLogged {
+		return
+	}
+	var user = &entity.User{}
+	userIDAsString := fmt.Sprintf("%v", userID)
+	userIDAsInt, err := strconv.Atoi(userIDAsString)
+	if err != nil {
+		utility.ErrorHandler(err)
+		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: "somethings wrong with this action"})
+		return
+	}
+	result := db.DB().Where("id = ?", uint(userIDAsInt)).Find(user)
+
+	if result.RowsAffected == 0 || result.Error != nil {
+		utility.ErrorHandler(result.Error)
+		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: "somethings wrong with this action"})
+		return
+	}
+
+	user.IsLogged = false
+	db.DB().Save(user)
+
+	rw.WriteHeader(http.StatusOK)
+	return
+}
+
+func updatePassword(rw http.ResponseWriter, r *http.Request) {
+	isBreak, userID := GuardRequest(rw, r)
+	if isBreak {
+		return
+	}
+	isLogged := isAuthenticated(rw, r, userID)
+	if !isLogged {
+		return
+	}
+	tokenUserID := fmt.Sprintf("%v", userID)
+
+	vars := mux.Vars(r)
+	ParamsUserID := vars["user_id"]
+
+	if tokenUserID != ParamsUserID {
+		rw.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: "you are not have permission this action"})
+		return
+	}
+	var passwordUpdateData = &passwordUpdateData{}
+	err := json.NewDecoder(r.Body).Decode(passwordUpdateData)
+
+	if err != nil {
+		utility.ErrorHandler(err)
+		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: err.Error()})
+		return
+	}
+
+	hashedPassword := sha256.Sum256([]byte(passwordUpdateData.NewPassword))
+	hexPassword := fmt.Sprintf("%x", hashedPassword)
+
+	result := db.DB().Model(&entity.User{}).Where("id = ?", ParamsUserID).Update("Password", hexPassword)
+
+	if result.RowsAffected == 0 || result.Error != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errResponse{ErrMessage: result.Error.Error()})
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	return
 }
 
 func headerMiddleware(next http.Handler) http.Handler {
@@ -223,12 +342,14 @@ func headerMiddleware(next http.Handler) http.Handler {
 
 // Start is function of rest server execute.
 func Start() {
-	fmt.Printf("Server listening on http://127.0.0.1%s\n", port)
+	fmt.Printf("Server listening on http://127.0.0.1%s/tbell\n", port)
 	router := mux.NewRouter().StrictSlash(true)
 	router.Use(headerMiddleware)
 	router.HandleFunc("/tbell", tbellHome)
 	router.HandleFunc("/tbell/user/{user_id:[0-9]+}", tbellUser).Methods("GET", "DELETE")
 	router.HandleFunc("/tbell/user", createUser).Methods("POST")
-	router.HandleFunc("/tbell/login", loginUser).Methods("POST")
+	router.HandleFunc("/tbell/user/login", loginUser).Methods("POST")
+	router.HandleFunc("/tbell/user/logout", logoutUser)
+	router.HandleFunc("/tbell/user/{user_id:[0-9]+}/password", updatePassword).Methods("PUT")
 	http.ListenAndServe(port, router)
 }

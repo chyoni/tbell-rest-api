@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/chiwon99881/restapi/entity"
 	"github.com/chiwon99881/restapi/utility"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -30,4 +31,15 @@ func CreateTable(v interface{}) {
 	}
 	err := DB().Migrator().CreateTable(v)
 	utility.ErrorHandler(err)
+}
+
+func IsLoggedIn(userID uint) bool {
+	var user = &entity.User{}
+	result := DB().Where("id = ?", userID).Find(user)
+
+	if result.RowsAffected == 0 || result.Error != nil {
+		utility.ErrorHandler(result.Error)
+		return false
+	}
+	return user.IsLogged
 }
